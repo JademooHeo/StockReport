@@ -125,8 +125,10 @@ def search_reports(keyword: str, max_results: int = 5) -> list[dict]:
 
     app = FirecrawlApp(api_key=api_key)
     from urllib.parse import quote
-    url = f"{BASE_URL}?searchType=keyword&keyword={quote(keyword)}"
-    logger.info("종목 검색: %s", url)
+    # Naver는 EUC-KR 인코딩 사용
+    encoded = quote(keyword.encode("euc-kr"))
+    url = f"{BASE_URL}?keyword={encoded}&searchType=keyword"
+    logger.info("종목 검색 URL: %s", url)
 
     try:
         result = app.scrape(url, formats=["markdown"], only_main_content=False)
@@ -135,8 +137,11 @@ def search_reports(keyword: str, max_results: int = 5) -> list[dict]:
         logger.error("Firecrawl 검색 오류: %s", e)
         return []
 
+    logger.info("검색 결과 길이: %d자, 첫 500자: %s", len(markdown), markdown[:500])
     all_reports = _parse_markdown_table(markdown)
+    logger.info("파싱된 리포트: %d건", len(all_reports))
     recent = [r for r in all_reports if r.get("published_at") and r["published_at"] >= cutoff]
+    logger.info("최근 1개월 필터 후: %d건", len(recent))
     return recent[:max_results]
 
 
