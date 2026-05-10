@@ -30,4 +30,4 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PDF_SAVE_DIR: ./pdfs
-        run: python run.py --pages 3
+        run: python run.py --pages 3 ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
