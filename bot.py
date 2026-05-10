@@ -184,7 +184,26 @@ async def _do_search(update: Update, query: str):
 
 # ── 메인 ─────────────────────────────────────────────
 
+def _start_health_server():
+    """Render Web Service 무료 티어 요건 충족용 더미 HTTP 서버."""
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
+        def log_message(self, *a, **kw): pass
+
+    port = int(os.environ.get("PORT", "8080"))
+    server = HTTPServer(("0.0.0.0", port), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    logger.info("Health server listening on :%d", port)
+
+
 def main():
+    _start_health_server()
     token = os.environ["TELEGRAM_BOT_TOKEN"]
 
     app = ApplicationBuilder().token(token).build()
