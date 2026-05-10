@@ -144,7 +144,7 @@ async def _do_search(update: Update, query: str):
     )
 
     try:
-        reports = search_reports(query, max_results=5)
+        reports = search_reports(query, max_results=3)
     except Exception as e:
         await update.message.reply_text(f"검색 오류: {e}")
         return

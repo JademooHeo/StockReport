@@ -8,7 +8,7 @@ import pdfplumber
 
 logger = logging.getLogger(__name__)
 
-MAX_CHARS = 5_000  # 로컬 LLM 품질 최적화: 핵심 내용은 앞 5,000자에 집중
+MAX_CHARS = 3_000  # 응답 속도 최적화 (Haiku 모델용)
 
 
 def extract_text(pdf_path: Path) -> Optional[str]:

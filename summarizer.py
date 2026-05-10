@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env", override=True)
 logger = logging.getLogger(__name__)
 
-MODEL = "claude-sonnet-4-6"
+MODEL = "claude-haiku-4-5"
 
 SYSTEM_PROMPT = """\
 당신은 증권 애널리스트 리포트를 분석하는 전문가입니다.
