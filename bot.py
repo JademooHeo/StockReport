@@ -31,8 +31,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 환경변수 주입 확인용 디버그 로그
-_env_keys = [k for k in os.environ if any(x in k for x in ["TELEGRAM","ANTHROPIC","SUPABASE","FIRECRAWL"])]
-logger.info("주입된 환경변수: %s", _env_keys)
+logger.info("전체 환경변수 키: %s", sorted(os.environ.keys()))
 
 KST = pytz.timezone("Asia/Seoul")
 KR_HOLIDAYS = holidays.country_holidays("KR")
