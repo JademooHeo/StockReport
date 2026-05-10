@@ -30,13 +30,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 환경변수 주입 확인용 디버그 로그
-_env_path = Path(__file__).parent / ".env"
-logger.info(".env 존재: %s / 경로: %s", _env_path.exists(), _env_path)
-if _env_path.exists():
-    _keys = [l.split('=')[0] for l in _env_path.read_text().splitlines() if '=' in l and not l.startswith('#')]
-    logger.info(".env 키 목록: %s", _keys)
-logger.info("TELEGRAM_BOT_TOKEN 존재: %s", "TELEGRAM_BOT_TOKEN" in os.environ)
 
 KST = pytz.timezone("Asia/Seoul")
 KR_HOLIDAYS = holidays.country_holidays("KR")
@@ -143,6 +136,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def _do_search(update: Update, query: str):
+    import asyncio
     from crawler import search_reports
 
     await update.message.reply_text(
@@ -161,10 +155,32 @@ async def _do_search(update: Update, query: str):
         )
         return
 
-    lines = [f"📋 <b>{query}</b> 최근 리포트 {len(reports)}건\n"]
-    for r in reports:
-        summary = _summarize_report(r)
+    # DB에 이미 요약된 것은 재사용, 없는 것만 새로 처리
+    supabase = db.get_client()
+    existing_rows = (
+        supabase.table("reports")
+        .select("source_url, summary")
+        .in_("source_url", [r["source_url"] for r in reports])
+        .execute()
+        .data
+    )
+    cached = {row["source_url"]: row.get("summary") for row in existing_rows}
 
+    await update.message.reply_text(
+        f"📥 {len(reports)}건 중 신규 {sum(1 for r in reports if r['source_url'] not in cached)}건 요약 중...",
+    )
+
+    # 캐시 없는 건만 병렬 요약
+    loop = asyncio.get_running_loop()
+    async def get_summary(r):
+        if r["source_url"] in cached:
+            return cached[r["source_url"]]
+        return await loop.run_in_executor(None, _summarize_report, r)
+
+    summaries = await asyncio.gather(*[get_summary(r) for r in reports])
+
+    lines = [f"📋 <b>{query}</b> 최근 리포트 {len(reports)}건\n"]
+    for r, summary in zip(reports, summaries):
         tp = ""
         if summary and summary.get("target_price"):
             tp = f"  ▸ 목표주가 {int(summary['target_price']):,}원"
@@ -202,21 +218,26 @@ def _start_health_server():
     logger.info("Health server listening on :%d", port)
 
 
-def main():
-    _start_health_server()
-    token = os.environ["TELEGRAM_BOT_TOKEN"]
-
-    app = ApplicationBuilder().token(token).build()
-    app.add_handler(CommandHandler("search", cmd_search))
-    app.add_handler(CommandHandler("briefing", cmd_briefing))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-
+async def _post_init(application):
+    """이벤트 루프가 시작된 후 스케줄러 기동."""
     scheduler = AsyncIOScheduler(timezone=KST)
     scheduler.add_job(scheduled_run, CronTrigger(hour=7,  minute=0, timezone=KST))
     scheduler.add_job(scheduled_run, CronTrigger(hour=18, minute=0, timezone=KST))
     scheduler.start()
+    application.bot_data["scheduler"] = scheduler
+    logger.info("스케줄러 시작 (07:00 / 18:00 KST)")
 
-    logger.info("봇 시작 (스케줄: 07:00 / 18:00 KST)")
+
+def main():
+    _start_health_server()
+    token = os.environ["TELEGRAM_BOT_TOKEN"]
+
+    app = ApplicationBuilder().token(token).post_init(_post_init).build()
+    app.add_handler(CommandHandler("search", cmd_search))
+    app.add_handler(CommandHandler("briefing", cmd_briefing))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+
+    logger.info("봇 시작")
     app.run_polling(drop_pending_updates=True)
 
 
