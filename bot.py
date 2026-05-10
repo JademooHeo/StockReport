@@ -165,19 +165,21 @@ async def _do_search(update: Update, query: str):
         .data
     )
     cached = {row["source_url"]: row.get("summary") for row in existing_rows}
+    new_count = sum(1 for r in reports if r["source_url"] not in cached)
 
     await update.message.reply_text(
-        f"📥 {len(reports)}건 중 신규 {sum(1 for r in reports if r['source_url'] not in cached)}건 요약 중...",
+        f"📥 {len(reports)}건 중 신규 {new_count}건 요약 중... (1건당 5~10초)",
     )
 
-    # 캐시 없는 건만 병렬 요약
+    # 순차 처리 (스레드 안전성 이슈 회피)
     loop = asyncio.get_running_loop()
-    async def get_summary(r):
+    summaries = []
+    for r in reports:
         if r["source_url"] in cached:
-            return cached[r["source_url"]]
-        return await loop.run_in_executor(None, _summarize_report, r)
-
-    summaries = await asyncio.gather(*[get_summary(r) for r in reports])
+            summaries.append(cached[r["source_url"]])
+        else:
+            s = await loop.run_in_executor(None, _summarize_report, r)
+            summaries.append(s)
 
     lines = [f"📋 <b>{query}</b> 최근 리포트 {len(reports)}건\n"]
     for r, summary in zip(reports, summaries):
