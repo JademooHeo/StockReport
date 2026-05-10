@@ -31,7 +31,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 환경변수 주입 확인용 디버그 로그
-logger.info("전체 환경변수 키: %s", sorted(os.environ.keys()))
+_env_path = Path(__file__).parent / ".env"
+logger.info(".env 존재: %s / 경로: %s", _env_path.exists(), _env_path)
+if _env_path.exists():
+    _keys = [l.split('=')[0] for l in _env_path.read_text().splitlines() if '=' in l and not l.startswith('#')]
+    logger.info(".env 키 목록: %s", _keys)
+logger.info("TELEGRAM_BOT_TOKEN 존재: %s", "TELEGRAM_BOT_TOKEN" in os.environ)
 
 KST = pytz.timezone("Asia/Seoul")
 KR_HOLIDAYS = holidays.country_holidays("KR")
