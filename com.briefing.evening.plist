@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.briefing.evening</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/coolmoo/무제 폴더 2/briefing/run.py</string>
+        <string>--pages</string>
+        <string>3</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>18</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/coolmoo/무제 폴더 2/briefing</string>
+
+    <key>StandardOutPath</key>
+    <string>/Users/coolmoo/무제 폴더 2/briefing/launchd_evening.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/coolmoo/무제 폴더 2/briefing/launchd_evening.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

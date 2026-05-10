@@ -1,0 +1,7 @@
+firecrawl-py
+pdfplumber==0.11.1
+anthropic
+supabase==2.5.0
+httpx==0.27.0
+python-dotenv==1.0.1
+holidays
