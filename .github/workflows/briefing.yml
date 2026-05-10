@@ -1,10 +1,7 @@
 name: Briefing
 
 on:
-  schedule:
-    - cron: '0 22 * * 0-4'  # 오전 7시 KST (UTC+9 기준, 전날 22:00 UTC)
-    - cron: '0 9 * * 1-5'   # 오후 6시 KST (당일 09:00 UTC)
-  workflow_dispatch:          # GitHub UI에서 수동 실행 가능
+  workflow_dispatch:  # 수동 실행만 (스케줄은 Railway bot.py에서 처리)
 
 jobs:
   run:
