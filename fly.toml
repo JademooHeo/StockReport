@@ -1,0 +1,14 @@
+app = "stockreport-bot"
+primary_region = "nrt"
+
+[build]
+
+[env]
+  PDF_SAVE_DIR = "./pdfs"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+[processes]
+  app = "python bot.py"
