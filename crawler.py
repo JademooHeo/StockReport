@@ -137,10 +137,15 @@ def search_reports(keyword: str, max_results: int = 5) -> list[dict]:
         logger.error("Firecrawl 검색 오류: %s", e)
         return []
 
-    logger.info("검색 결과 길이: %d자, 첫 500자: %s", len(markdown), markdown[:500])
+    logger.info("검색 결과 길이: %d자", len(markdown))
     all_reports = _parse_markdown_table(markdown)
     logger.info("파싱된 리포트: %d건", len(all_reports))
-    recent = [r for r in all_reports if r.get("published_at") and r["published_at"] >= cutoff]
+
+    # 종목명이 검색어와 정확히 일치하는 것만 (예: '삼성전자'를 검색하면 '삼성생명' 제외)
+    name_matched = [r for r in all_reports if r.get("stock_name") == keyword]
+    logger.info("종목명 일치 후: %d건", len(name_matched))
+
+    recent = [r for r in name_matched if r.get("published_at") and r["published_at"] >= cutoff]
     logger.info("최근 1개월 필터 후: %d건", len(recent))
     return recent[:max_results]
 
