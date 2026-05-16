@@ -1,4 +1,7 @@
-"""텔레그램 봇 — 스케줄 브리핑 + 종목 검색."""
+"""텔레그램 봇 — 종목 검색 + 브리핑 조회 (인터랙티브 전용).
+
+스케줄 브리핑은 GitHub Actions가 담당 (.github/workflows/briefing.yml).
+"""
 
 from pathlib import Path
 from dotenv import load_dotenv
@@ -8,10 +11,7 @@ import logging
 import os
 from datetime import date, datetime
 
-import holidays
 import pytz
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
@@ -32,19 +32,9 @@ logger = logging.getLogger(__name__)
 
 
 KST = pytz.timezone("Asia/Seoul")
-KR_HOLIDAYS = holidays.country_holidays("KR")
-CHAT_ID = int(os.environ.get("TELEGRAM_CHAT_ID", "0"))
 
 
 # ── 유틸 ──────────────────────────────────────────────
-
-def is_business_day(d: date) -> bool:
-    if d.weekday() >= 5:
-        return False
-    if d in KR_HOLIDAYS:
-        return False
-    return True
-
 
 def _summarize_report(r: dict) -> dict | None:
     """PDF 다운로드 → 텍스트 추출 → Claude 요약."""
@@ -62,42 +52,6 @@ def _summarize_report(r: dict) -> dict | None:
     if not text:
         return None
     return summarizer.summarize(text, title=r.get("title", ""), stock_name=r.get("stock_name", ""))
-
-
-# ── 스케줄 실행 ───────────────────────────────────────
-
-async def scheduled_run(pages: int = 3):
-    """크롤링 + 요약 + 브리핑 전송 (영업일만)."""
-    from crawler import crawl_reports
-
-    today = datetime.now(KST).date()
-    if not is_business_day(today):
-        logger.info("비영업일 스킵: %s", today)
-        return
-
-    logger.info("스케줄 실행 시작: %s", today)
-    reports = crawl_reports(max_pages=pages)
-
-    supabase = db.get_client()
-    existing = db.get_existing_urls(supabase)
-    new_reports = [r for r in reports if r["source_url"] not in existing]
-    logger.info("신규 %d건 처리", len(new_reports))
-
-    for r in new_reports:
-        summary = _summarize_report(r)
-        if summary:
-            r["opinion"] = r.get("opinion") or summary.get("opinion")
-            r["target_price"] = r.get("target_price") or summary.get("target_price")
-        try:
-            db.upsert_report(supabase, {**r, "summary": summary})
-        except Exception as e:
-            logger.error("DB 저장 실패: %s", e)
-
-    msg = briefing_mod.build_message(today)
-    if msg:
-        notifier.send(msg)
-    else:
-        notifier.send(f"📭 {today} 브리핑\n발행된 리포트가 없습니다.")
 
 
 # ── 텔레그램 핸들러 ───────────────────────────────────
@@ -220,26 +174,16 @@ def _start_health_server():
     logger.info("Health server listening on :%d", port)
 
 
-async def _post_init(application):
-    """이벤트 루프가 시작된 후 스케줄러 기동."""
-    scheduler = AsyncIOScheduler(timezone=KST)
-    scheduler.add_job(scheduled_run, CronTrigger(hour=7,  minute=0, timezone=KST))
-    scheduler.add_job(scheduled_run, CronTrigger(hour=18, minute=0, timezone=KST))
-    scheduler.start()
-    application.bot_data["scheduler"] = scheduler
-    logger.info("스케줄러 시작 (07:00 / 18:00 KST)")
-
-
 def main():
     _start_health_server()
     token = os.environ["TELEGRAM_BOT_TOKEN"]
 
-    app = ApplicationBuilder().token(token).post_init(_post_init).build()
+    app = ApplicationBuilder().token(token).build()
     app.add_handler(CommandHandler("search", cmd_search))
     app.add_handler(CommandHandler("briefing", cmd_briefing))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
-    logger.info("봇 시작")
+    logger.info("봇 시작 (스케줄은 GitHub Actions가 담당)")
     app.run_polling(drop_pending_updates=True)
 
 

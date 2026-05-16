@@ -1,7 +1,10 @@
 name: Briefing
 
 on:
-  workflow_dispatch:  # 수동 실행만 (스케줄은 Railway bot.py에서 처리)
+  schedule:
+    - cron: '0 23 * * 0-4'  # 매일 08:00 KST (UTC+9 → 전날 23:00 UTC, 일~목 UTC = 월~금 KST)
+    - cron: '0 9 * * 1-5'   # 매일 18:00 KST (UTC+9 → 당일 09:00 UTC, 월~금)
+  workflow_dispatch:
 
 jobs:
   run:
