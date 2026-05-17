@@ -3,22 +3,24 @@ from pathlib import Path
 """Supabase에서 당일 리포트를 조회해 텔레그램 브리핑 메시지 생성."""
 
 import os
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent / ".env", override=True)
 
+KST = timezone(timedelta(hours=9))
+
 
 def build_message(target_date: Optional[date] = None) -> Optional[str]:
     """
-    target_date(기본값: 오늘)의 리포트를 조회해 브리핑 텍스트 반환.
+    target_date(기본값: 한국 시간 기준 오늘)의 리포트를 조회해 브리핑 텍스트 반환.
     리포트가 없으면 None 반환.
     """
     from supabase import create_client
     client = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
-    d = target_date or date.today()
+    d = target_date or datetime.now(KST).date()
     rows = (
         client.table("reports")
         .select("*")

@@ -14,7 +14,9 @@ from pathlib import Path
 import argparse
 import logging
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
+
+KST = timezone(timedelta(hours=9))
 
 import holidays
 from dotenv import load_dotenv
@@ -119,7 +121,7 @@ def main():
     parser.add_argument("--force", action="store_true", help="비영업일도 강제 실행")
     args = parser.parse_args()
 
-    target = date.fromisoformat(args.date) if args.date else date.today()
+    target = date.fromisoformat(args.date) if args.date else datetime.now(KST).date()
 
     if not args.force and not is_business_day(target):
         logger.info("%s은 비영업일입니다. 종료.", target)
