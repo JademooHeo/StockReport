@@ -105,8 +105,9 @@ def crawl_and_summarize(pages: int = 3) -> int:
 def send_briefing(target_date: date) -> None:
     msg = briefing_mod.build_message(target_date)
     if not msg:
-        logger.info("발송할 리포트 없음 (%s)", target_date)
-        notifier.send(f"📭 {target_date} 브리핑\n발행된 리포트가 없습니다.")
+        # 오늘도 없고 과거 리포트도 없는 극단적인 케이스 (DB 비어있음)
+        logger.info("DB에 리포트 자체가 없음 (%s)", target_date)
+        notifier.send(f"📭 {target_date} 브리핑\nDB에 리포트가 없습니다.")
         return
 
     notifier.send(msg)
