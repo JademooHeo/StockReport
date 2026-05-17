@@ -111,45 +111,6 @@ def _parse_markdown_table(markdown: str) -> list[dict]:
     return reports
 
 
-def search_reports(keyword: str, max_results: int = 5) -> list[dict]:
-    """
-    특정 종목명으로 네이버 증권 리포트 검색.
-    최근 1개월 이내, 최대 max_results건 반환.
-    """
-    from datetime import date, timedelta
-    cutoff = (date.today() - timedelta(days=30)).isoformat()
-
-    api_key = os.environ.get("FIRECRAWL_API_KEY")
-    if not api_key:
-        raise ValueError("FIRECRAWL_API_KEY가 설정되지 않았습니다.")
-
-    app = FirecrawlApp(api_key=api_key)
-    from urllib.parse import quote
-    # Naver는 EUC-KR 인코딩 사용
-    encoded = quote(keyword.encode("euc-kr"))
-    url = f"{BASE_URL}?keyword={encoded}&searchType=keyword"
-    logger.info("종목 검색 URL: %s", url)
-
-    try:
-        result = app.scrape(url, formats=["markdown"], only_main_content=False)
-        markdown = result.markdown if hasattr(result, "markdown") else (result.get("markdown") or "")
-    except Exception as e:
-        logger.error("Firecrawl 검색 오류: %s", e)
-        return []
-
-    logger.info("검색 결과 길이: %d자", len(markdown))
-    all_reports = _parse_markdown_table(markdown)
-    logger.info("파싱된 리포트: %d건", len(all_reports))
-
-    # 종목명이 검색어와 정확히 일치하는 것만 (예: '삼성전자'를 검색하면 '삼성생명' 제외)
-    name_matched = [r for r in all_reports if r.get("stock_name") == keyword]
-    logger.info("종목명 일치 후: %d건", len(name_matched))
-
-    recent = [r for r in name_matched if r.get("published_at") and r["published_at"] >= cutoff]
-    logger.info("최근 1개월 필터 후: %d건", len(recent))
-    return recent[:max_results]
-
-
 def crawl_reports(max_pages: int = 3) -> list[dict]:
     """
     Firecrawl로 네이버 증권 종목분석 리포트 목록 수집.
